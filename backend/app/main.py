@@ -1,32 +1,46 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from contextlib import asynccontextmanager
-import asyncio
-import os
 from app.core.config import settings
-from app.db.session import Base, engine
+from app.core.security import hash_password
+from app.db.session import Base, engine, SessionLocal
+from app.models.user import User
+from app.models.customer import Customer
+from app.routers import auth, customers
 
-from app.routers import (
-    auth,
-    customers,
-    categories,
-    tickets,
-    comments,
-    attachments,
-    notifications,
-    sla,
-    dashboard,
-    audit_logs,
-    users,
-)
+
+def seed_admin():
+    db = SessionLocal()
+    try:
+        existing = db.query(User).filter(User.email == "admin@example.com").first()
+        if not existing:
+            admin = User(
+                full_name="Admin",
+                email="admin@example.com",
+                password_hash=hash_password("Admin@123"),
+                role="admin",
+                is_active=True,
+            )
+            db.add(admin)
+            db.commit()
+    finally:
+        db.close()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    seed_admin()
+    yield
 
 
 app = FastAPI(
     title=settings.app_name,
     version="1.0.0",
-    description="Production-style monolithic CRM & customer support API",
+    description="CRM Support API — Authentication & Customers only",
+    lifespan=lifespan,
 )
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
@@ -34,13 +48,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
-for x in [
-    customers,
-    tickets,
-    users,
-]:
-    app.include_router(x.r)
+
+app.include_router(auth.r)
+app.include_router(customers.r)
 
 
 @app.get("/health")

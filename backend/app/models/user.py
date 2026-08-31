@@ -11,4 +11,3 @@ class User(Base):
     role:Mapped[str]=mapped_column(String(30),index=True,default="customer")
     is_active:Mapped[bool]=mapped_column(Boolean,default=True,index=True)
     created_at:Mapped[object]=mapped_column(DateTime(timezone=True),server_default=func.now())
-    customer:Mapped["Customer|None"]=relationship(back_populates="user",uselist=False)
