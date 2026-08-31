@@ -11,18 +11,24 @@ from app.routers import auth, customers
 
 def seed_admin():
     db = SessionLocal()
+
     try:
-        existing = db.query(User).filter(User.email == "admin@example.com").first()
-        if not existing:
-            admin = User(
-                full_name="Admin",
-                email="admin@example.com",
-                password_hash=hash_password("Admin@123"),
-                role="admin",
-                is_active=True,
-            )
-            db.add(admin)
-            db.commit()
+        existing = db.query(User).filter(User.email == "admin@crm.local").first()
+
+        if existing:
+            return
+
+        admin = User(
+            full_name="System Administrator",
+            email="admin@crm.local",
+            password_hash=hash_password("Admin@123"),
+            role="admin",
+            is_active=True,
+        )
+
+        db.add(admin)
+        db.commit()
+
     finally:
         db.close()
 

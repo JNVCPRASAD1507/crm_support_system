@@ -1,12 +1,26 @@
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+
 from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class RegisterIn(BaseModel):
-    full_name: str = Field(min_length=2, max_length=120)
+    full_name: str = Field(
+        min_length=2,
+        max_length=120,
+    )
+
     email: EmailStr
-    password: str = Field(min_length=8)
-    phone: str | None = None
+
+    password: str = Field(
+        min_length=8,
+        max_length=72,
+    )
+
+    phone: str | None = Field(
+        default=None,
+        max_length=30,
+    )
 
 
 class LoginIn(BaseModel):
@@ -21,6 +35,7 @@ class Token(BaseModel):
 
 class Profile(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
     id: int
     full_name: str
     email: EmailStr
@@ -31,10 +46,21 @@ class Profile(BaseModel):
 
 
 class ProfileUpdate(BaseModel):
-    full_name: str | None = None
-    phone: str | None = None
+    full_name: str | None = Field(
+        default=None,
+        min_length=2,
+        max_length=120,
+    )
+
+    phone: str | None = Field(
+        default=None,
+        max_length=30,
+    )
 
 
 class ChangePassword(BaseModel):
     current_password: str
-    new_password: str = Field(min_length=8)
+    new_password: str = Field(
+        min_length=8,
+        max_length=72,
+    )
