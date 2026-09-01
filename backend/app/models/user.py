@@ -1,14 +1,7 @@
-
-from datetime import datetime
-from typing import TYPE_CHECKING
-
-from sqlalchemy import Boolean, DateTime, String, func
+from sqlalchemy import String, Boolean, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
-
-if TYPE_CHECKING:
-    from app.models.customer import Customer
 
 
 class User(Base):
@@ -41,8 +34,8 @@ class User(Base):
     role: Mapped[str] = mapped_column(
         String(30),
         index=True,
-        default="customer",
         nullable=False,
+        default="customer",
     )
 
     is_active: Mapped[bool] = mapped_column(
@@ -52,15 +45,20 @@ class User(Base):
         nullable=False,
     )
 
-    created_at: Mapped[datetime] = mapped_column(
+    created_at: Mapped[object] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
-        nullable=False,
     )
 
-    # One customer profile per user account.
-    customer: Mapped["Customer | None"] = relationship(
+    # One User can have one Customer profile.
+    customer = relationship(
         "Customer",
         back_populates="user",
         uselist=False,
+    )
+
+    assigned_tickets = relationship(
+        "Ticket",
+        foreign_keys="Ticket.assigned_agent_id",
+        back_populates="assigned_agent",
     )

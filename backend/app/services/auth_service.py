@@ -1,26 +1,26 @@
-
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
 
 from app.core.security import (
-    create_access_token,
     hash_password,
     verify_password,
+    create_access_token,
 )
-from app.models.customer import Customer
-from app.models.user import User
+
+from app.repositories.user_repository import UserRepository
+from app.repositories.customer_repository import CustomerRepository
 
 
 class AuthService:
 
     @staticmethod
-    def register(db: Session, data):
-        email = str(data.email).strip().lower()
+    def register(db, data):
 
-        existing_user = (
-            db.query(User)
-            .filter(User.email == email)
-            .first()
+        user_repo = UserRepository(db)
+        customer_repo = CustomerRepository(db)
+
+        # Check duplicate email
+        existing_user = user_repo.by_email(
+            data.email
         )
 
         if existing_user:
@@ -29,49 +29,44 @@ class AuthService:
                 detail="Email already registered",
             )
 
-        user = User(
-            full_name=data.full_name.strip(),
-            email=email,
+        # Convert enum to string
+        role = data.role.value
+
+        # Create User
+        user = user_repo.create(
+            full_name=data.full_name,
+            email=data.email,
             phone=data.phone,
-            password_hash=hash_password(data.password),
-            role="customer",
+            password_hash=hash_password(
+                data.password
+            ),
+            role=role,
             is_active=True,
         )
 
-        db.add(user)
-        db.flush()
-
-        customer = Customer(
-            user_id=user.id,
-            name=user.full_name,
-            email=user.email,
-            phone=user.phone,
-            status="active",
-        )
-
-        db.add(customer)
+        # Only customers get a Customer profile.
+        if role == "customer":
+            customer_repo.create(
+                user_id=user.id,
+                name=data.full_name,
+                email=data.email,
+                phone=data.phone,
+                status="active",
+            )
 
         return user
 
     @staticmethod
-    def login(
-        db: Session,
-        email: str,
-        password: str,
-    ):
-        normalized_email = str(email).strip().lower()
+    def login(db, email, password):
 
-        user = (
-            db.query(User)
-            .filter(User.email == normalized_email)
-            .first()
-        )
+        user_repo = UserRepository(db)
+
+        user = user_repo.by_email(email)
 
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password",
-                headers={"WWW-Authenticate": "Bearer"},
             )
 
         if not verify_password(
@@ -81,15 +76,16 @@ class AuthService:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password",
-                headers={"WWW-Authenticate": "Bearer"},
             )
 
         if not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Account is inactive",
+                detail="Account inactive",
             )
 
-        token = create_access_token(user.id)
+        token = create_access_token(
+            user.id
+        )
 
         return token, user

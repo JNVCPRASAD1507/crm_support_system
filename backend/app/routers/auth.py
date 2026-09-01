@@ -1,20 +1,32 @@
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+)
 
-from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_current_user
-from app.core.security import hash_password, verify_password
 from app.db.session import get_db
-from app.models.user import User
+
 from app.schemas.auth import (
-    ChangePassword,
+    RegisterIn,
     LoginIn,
+    Token,
     Profile,
     ProfileUpdate,
-    RegisterIn,
-    Token,
+    ChangePassword,
 )
+
 from app.services.auth_service import AuthService
+
+from app.core.dependencies import (
+    get_current_user,
+)
+
+from app.core.security import (
+    verify_password,
+    hash_password,
+)
 
 
 r = APIRouter(
@@ -26,23 +38,21 @@ r = APIRouter(
 @r.post(
     "/register",
     response_model=Profile,
-    status_code=status.HTTP_201_CREATED,
+    status_code=201,
 )
 def register(
     data: RegisterIn,
     db: Session = Depends(get_db),
 ):
-    try:
-        user = AuthService.register(db, data)
+    user = AuthService.register(
+        db,
+        data,
+    )
 
-        db.commit()
-        db.refresh(user)
+    db.commit()
+    db.refresh(user)
 
-        return user
-
-    except Exception:
-        db.rollback()
-        raise
+    return user
 
 
 @r.post(
@@ -70,7 +80,7 @@ def login(
     response_model=Profile,
 )
 def profile(
-    user: User = Depends(get_current_user),
+    user=Depends(get_current_user),
 ):
     return user
 
@@ -82,25 +92,13 @@ def profile(
 def update_profile(
     data: ProfileUpdate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user=Depends(get_current_user),
 ):
-    values = data.model_dump(
-        exclude_none=True,
-    )
 
-    if "full_name" in values:
-        values["full_name"] = values["full_name"].strip()
-
-    for key, value in values.items():
+    for key, value in data.model_dump(
+        exclude_none=True
+    ).items():
         setattr(user, key, value)
-
-    # Keep customer profile synchronized with account data.
-    if user.customer:
-        if "full_name" in values:
-            user.customer.name = values["full_name"]
-
-        if "phone" in values:
-            user.customer.phone = values["phone"]
 
     db.commit()
     db.refresh(user)
@@ -112,32 +110,24 @@ def update_profile(
 def change_password(
     data: ChangePassword,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user=Depends(get_current_user),
 ):
+
     if not verify_password(
         data.current_password,
         user.password_hash,
     ):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail="Current password is incorrect",
         )
 
-    if verify_password(
-        data.new_password,
-        user.password_hash,
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New password must be different from current password",
-        )
-
     user.password_hash = hash_password(
-        data.new_password,
+        data.new_password
     )
 
     db.commit()
 
     return {
-        "message": "Password changed successfully",
+        "message": "Password changed successfully"
     }

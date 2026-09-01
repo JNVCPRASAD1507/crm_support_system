@@ -1,11 +1,7 @@
-
-from datetime import datetime
-
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import String, DateTime, ForeignKey, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
-from app.models.user import User
 
 
 class Customer(Base):
@@ -14,21 +10,24 @@ class Customer(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
 
     user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"),
+        ForeignKey(
+            "users.id",
+            ondelete="SET NULL",
+        ),
         unique=True,
         nullable=True,
     )
 
     name: Mapped[str] = mapped_column(
         String(120),
-        index=True,
         nullable=False,
+        index=True,
     )
 
     email: Mapped[str] = mapped_column(
         String(255),
-        index=True,
         nullable=False,
+        index=True,
     )
 
     phone: Mapped[str | None] = mapped_column(
@@ -53,14 +52,17 @@ class Customer(Base):
         nullable=False,
     )
 
-    created_at: Mapped[datetime] = mapped_column(
+    created_at: Mapped[object] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
-        nullable=False,
     )
 
-    user: Mapped["User | None"] = relationship(
+    user = relationship(
         "User",
         back_populates="customer",
     )
 
+    tickets = relationship(
+        "Ticket",
+        back_populates="customer",
+    )

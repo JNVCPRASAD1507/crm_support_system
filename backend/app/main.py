@@ -6,7 +6,8 @@ from app.core.security import hash_password
 from app.db.session import Base, engine, SessionLocal
 from app.models.user import User
 from app.models.customer import Customer
-from app.routers import auth, customers
+from app.routers import auth, customers , categories
+from app.routers import tickets
 
 
 def seed_admin():
@@ -35,7 +36,7 @@ def seed_admin():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    # Base.metadata.create_all(bind=engine)
     seed_admin()
     yield
 
@@ -57,6 +58,8 @@ app.add_middleware(
 
 app.include_router(auth.r)
 app.include_router(customers.r)
+app.include_router(categories.router)
+app.include_router(tickets.router)
 
 
 @app.get("/health")
