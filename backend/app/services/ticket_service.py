@@ -8,6 +8,7 @@ from app.models.ticket import Ticket
 from app.models.user import User
 
 from app.repositories.ticket_repository import TicketRepository
+from app.schemas import ticket
 
 
 class TicketService:
