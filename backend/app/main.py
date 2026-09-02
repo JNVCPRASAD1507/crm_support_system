@@ -1,13 +1,18 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.core.config import settings
 from app.core.security import hash_password
 from app.db.session import Base, engine, SessionLocal
+
 from app.models.user import User
 from app.models.customer import Customer
-from app.routers import auth, customers , categories
+
+from app.routers import auth, customers, categories
 from app.routers import tickets
+from app.routers.ticket_comments import router as ticket_comments_router
 
 
 def seed_admin():
@@ -48,6 +53,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
@@ -56,12 +62,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 app.include_router(auth.r)
 app.include_router(customers.r)
 app.include_router(categories.router)
 app.include_router(tickets.router)
+app.include_router(ticket_comments_router)
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": settings.app_name}
+    return {
+        "status": "ok",
+        "service": settings.app_name,
+    }

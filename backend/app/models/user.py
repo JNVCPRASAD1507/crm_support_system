@@ -62,3 +62,8 @@ class User(Base):
         foreign_keys="Ticket.assigned_agent_id",
         back_populates="assigned_agent",
     )
+
+    comments = relationship(
+        "TicketComment",
+        back_populates="user",
+    )

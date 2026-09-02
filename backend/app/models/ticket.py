@@ -116,3 +116,10 @@ class Ticket(Base):
         "Category",
         back_populates="tickets",
     )
+    
+    comments = relationship(
+    "TicketComment",
+    back_populates="ticket",
+    cascade="all, delete-orphan",
+)
+     
