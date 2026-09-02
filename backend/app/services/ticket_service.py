@@ -1,4 +1,3 @@
-
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
@@ -23,9 +22,31 @@ class TicketService:
     ALLOWED_STATUSES = {
         "open",
         "in_progress",
-        "pending",
+        "waiting_for_customer",
         "resolved",
         "closed",
+        "cancelled",
+    }
+
+    ALLOWED_STATUS_TRANSITIONS = {
+        "open": {
+            "in_progress",
+            "cancelled",
+        },
+        "in_progress": {
+            "waiting_for_customer",
+            "resolved",
+            "cancelled",
+        },
+        "waiting_for_customer": {
+            "in_progress",
+            "cancelled",
+        },
+        "resolved": {
+            "closed",
+        },
+        "closed": set(),
+        "cancelled": set(),
     }
 
     def __init__(self, db: Session):
@@ -45,9 +66,7 @@ class TicketService:
         from app.models.customer import Customer
 
         customer = (
-            self.db.query(Customer)
-            .filter(Customer.id == data.customer_id)
-            .first()
+            self.db.query(Customer).filter(Customer.id == data.customer_id).first()
         )
 
         if not customer:
@@ -63,9 +82,7 @@ class TicketService:
         if data.category_id is not None:
 
             category = (
-                self.db.query(Category)
-                .filter(Category.id == data.category_id)
-                .first()
+                self.db.query(Category).filter(Category.id == data.category_id).first()
             )
 
             if not category:
@@ -90,8 +107,7 @@ class TicketService:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
-                    "Invalid priority. Allowed values: "
-                    "low, medium, high, urgent"
+                    "Invalid priority. Allowed values: " "low, medium, high, urgent"
                 ),
             )
 
@@ -169,8 +185,7 @@ class TicketService:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=(
-                        "Invalid priority. Allowed values: "
-                        "low, medium, high, urgent"
+                        "Invalid priority. Allowed values: " "low, medium, high, urgent"
                     ),
                 )
 
@@ -203,9 +218,7 @@ class TicketService:
         if data.category_id is not None:
 
             category = (
-                self.db.query(Category)
-                .filter(Category.id == data.category_id)
-                .first()
+                self.db.query(Category).filter(Category.id == data.category_id).first()
             )
 
             if not category:
@@ -227,9 +240,7 @@ class TicketService:
         if data.assigned_agent_id is not None:
 
             agent = (
-                self.db.query(User)
-                .filter(User.id == data.assigned_agent_id)
-                .first()
+                self.db.query(User).filter(User.id == data.assigned_agent_id).first()
             )
 
             if not agent:
@@ -258,30 +269,48 @@ class TicketService:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=(
-                        "Invalid priority. Allowed values: "
-                        "low, medium, high, urgent"
+                        "Invalid priority. Allowed values: " "low, medium, high, urgent"
                     ),
                 )
 
-        # --------------------------------------------------------
-        # Validate status
-        # --------------------------------------------------------
+# --------------------------------------------------------
+# Validate status
+# --------------------------------------------------------
 
-        new_status = data.status
+new_status = data.status
 
-        if new_status is not None:
+if new_status is not None:
 
-            new_status = new_status.lower()
+    new_status = new_status.lower()
 
-            if new_status not in self.ALLOWED_STATUSES:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=(
-                        "Invalid status. Allowed values: "
-                        "open, in_progress, pending, "
-                        "resolved, closed"
-                    ),
-                )
+    if new_status not in self.ALLOWED_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Invalid status. Allowed values: "
+                "open, in_progress, waiting_for_customer, "
+                "resolved, closed, cancelled"
+            ),
+        )
+
+    current_status = ticket.status
+
+    # No transition needed if status is unchanged
+    if new_status != current_status:
+
+        allowed_next_statuses = self.ALLOWED_STATUS_TRANSITIONS.get(
+            current_status,
+            set(),
+        )
+
+        if new_status not in allowed_next_statuses:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Invalid status transition: "
+                    f"{current_status} → {new_status}"
+                ),
+            )
 
         # --------------------------------------------------------
         # Handle resolved_at
@@ -289,16 +318,10 @@ class TicketService:
 
         resolved_at = ticket.resolved_at
 
-        if (
-            new_status in {"resolved", "closed"}
-            and ticket.resolved_at is None
-        ):
+        if new_status in {"resolved", "closed"} and ticket.resolved_at is None:
             resolved_at = datetime.now(timezone.utc)
 
-        elif (
-            new_status is not None
-            and new_status not in {"resolved", "closed"}
-        ):
+        elif new_status is not None and new_status not in {"resolved", "closed"}:
             resolved_at = None
 
         # --------------------------------------------------------
@@ -336,8 +359,4 @@ class TicketService:
 
         self.repository.delete(ticket)
 
-        return {
-            "message": "Ticket deleted successfully"
-        }
-        
-        
+        return {"message": "Ticket deleted successfully"}
