@@ -16,6 +16,7 @@ from app.routers.ticket_comments import router as ticket_comments_router
 from app.routers import ticket_attachments
 from app.routers.notifications import router as notifications_router
 from app.routers import slas
+from app.routers import dashboard
 
 
 def seed_admin():
@@ -74,6 +75,7 @@ app.include_router(ticket_comments_router)
 app.include_router(ticket_attachments.router)
 app.include_router(notifications_router)
 app.include_router(slas.router)
+app.include_router(dashboard.router)
 
 
 @app.get("/health")
