@@ -69,13 +69,18 @@ class User(Base):
     )
 
     uploaded_attachments = relationship(
-    "TicketAttachment",
-    back_populates="uploaded_by",
-    cascade="all, delete-orphan",
-)
+        "TicketAttachment",
+        back_populates="uploaded_by",
+        cascade="all, delete-orphan",
+    )
 
     notifications = relationship(
         "Notification",
         back_populates="user",
         cascade="all, delete-orphan",
+    )
+
+    audit_logs = relationship(
+        "AuditLog",
+        back_populates="user",
     )

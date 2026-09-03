@@ -41,9 +41,7 @@ class TicketUpdate(BaseModel):
 
 
 class TicketResponse(BaseModel):
-    model_config = ConfigDict(
-        from_attributes=True
-    )
+    model_config = ConfigDict(from_attributes=True)
 
     id: int
 
@@ -63,3 +61,17 @@ class TicketResponse(BaseModel):
     resolved_at: datetime | None
     sla_deadline: datetime | None
     first_response_at: datetime | None
+
+
+class TicketListResponse(BaseModel):
+    items: list[TicketResponse]
+
+    total: int
+
+    skip: int
+
+    limit: int
+
+    page: int
+
+    pages: int

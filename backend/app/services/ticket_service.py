@@ -1,4 +1,6 @@
-from datetime import datetime, timezone
+
+from datetime import datetime, timedelta, timezone
+import math
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -8,7 +10,6 @@ from app.models.ticket import Ticket
 from app.models.user import User
 
 from app.repositories.ticket_repository import TicketRepository
-from app.schemas import ticket
 
 
 # Backward-compatible export used by business-rule tests.
@@ -84,6 +85,11 @@ class TicketService:
     def create(self, data):
 
         from app.models.customer import Customer
+        from app.services.sla_service import SLAService
+
+        # --------------------------------------------------------
+        # Validate customer
+        # --------------------------------------------------------
 
         customer = (
             self.db.query(Customer)
@@ -96,6 +102,10 @@ class TicketService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Customer not found",
             )
+
+        # --------------------------------------------------------
+        # Validate category
+        # --------------------------------------------------------
 
         if data.category_id is not None:
 
@@ -117,6 +127,10 @@ class TicketService:
                     detail="Category is inactive",
                 )
 
+        # --------------------------------------------------------
+        # Validate priority
+        # --------------------------------------------------------
+
         priority = data.priority.lower()
 
         if priority not in self.ALLOWED_PRIORITIES:
@@ -128,13 +142,51 @@ class TicketService:
                 ),
             )
 
-        return self.repository.create(
+        # --------------------------------------------------------
+        # Get SLA for priority
+        # --------------------------------------------------------
+
+        sla_service = SLAService(self.db)
+
+        sla = sla_service.get_sla_for_priority(
+            priority
+        )
+
+        # --------------------------------------------------------
+        # Calculate SLA deadline
+        # --------------------------------------------------------
+
+        start_time = datetime.now(timezone.utc)
+
+        sla_deadline = (
+            start_time
+            + timedelta(
+                minutes=sla.resolution_time_minutes
+            )
+        )
+
+        # --------------------------------------------------------
+        # Create ticket
+        # --------------------------------------------------------
+
+        ticket = self.repository.create(
             customer_id=data.customer_id,
             category_id=data.category_id,
             subject=data.subject,
             description=data.description,
             priority=priority,
         )
+
+        # --------------------------------------------------------
+        # Assign SLA deadline
+        # --------------------------------------------------------
+
+        ticket.sla_deadline = sla_deadline
+
+        self.db.flush()
+        self.db.refresh(ticket)
+
+        return ticket
 
     # ============================================================
     # GET TICKET
@@ -161,12 +213,17 @@ class TicketService:
         *,
         skip: int = 0,
         limit: int = 20,
+        search: str | None = None,
         status_filter: str | None = None,
         priority: str | None = None,
         customer_id: int | None = None,
         category_id: int | None = None,
         assigned_agent_id: int | None = None,
     ):
+
+        # --------------------------------------------------------
+        # Validate status
+        # --------------------------------------------------------
 
         if status_filter is not None:
 
@@ -182,6 +239,10 @@ class TicketService:
                     ),
                 )
 
+        # --------------------------------------------------------
+        # Validate priority
+        # --------------------------------------------------------
+
         if priority is not None:
 
             priority = priority.lower()
@@ -195,15 +256,41 @@ class TicketService:
                     ),
                 )
 
-        return self.repository.list(
+        # --------------------------------------------------------
+        # Get paginated tickets
+        # --------------------------------------------------------
+
+        items, total = self.repository.list(
             skip=skip,
             limit=limit,
+            search=search,
             status=status_filter,
             priority=priority,
             customer_id=customer_id,
             category_id=category_id,
             assigned_agent_id=assigned_agent_id,
         )
+
+        # --------------------------------------------------------
+        # Calculate pagination
+        # --------------------------------------------------------
+
+        page = (skip // limit) + 1
+
+        pages = (
+            math.ceil(total / limit)
+            if total > 0
+            else 0
+        )
+
+        return {
+            "items": items,
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+            "page": page,
+            "pages": pages,
+        }
 
     # ============================================================
     # UPDATE TICKET
@@ -271,9 +358,7 @@ class TicketService:
             }:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=(
-                        "User is not an eligible support agent"
-                    ),
+                    detail="User is not an eligible support agent",
                 )
 
         # --------------------------------------------------------
@@ -348,10 +433,15 @@ class TicketService:
                 # ------------------------------------------------
 
                 if (
-                    new_status in {"resolved", "closed"}
+                    new_status in {
+                        "resolved",
+                        "closed",
+                    }
                     and ticket.resolved_at is None
                 ):
-                    resolved_at = datetime.now(timezone.utc)
+                    resolved_at = datetime.now(
+                        timezone.utc
+                    )
 
                 elif new_status not in {
                     "resolved",

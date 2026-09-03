@@ -7,3 +7,6 @@ from .ticket_comment import TicketComment
 from .ticket_attachment import TicketAttachment
 from .notification import Notification
 from .sla import SLA
+from .audit_log import AuditLog
+
+

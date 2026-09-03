@@ -14,6 +14,7 @@ from app.schemas.ticket import (
     TicketCreate,
     TicketUpdate,
     TicketResponse,
+    TicketListResponse,
 )
 
 from app.services.ticket_service import TicketService
@@ -34,6 +35,7 @@ router = APIRouter(
 # CREATE TICKET
 # ADMIN / SUPPORT AGENT / CUSTOMER
 # ============================================================
+
 
 @router.post(
     "",
@@ -67,9 +69,10 @@ def create_ticket(
 # ADMIN / SUPPORT AGENT / CUSTOMER
 # ============================================================
 
+
 @router.get(
     "",
-    response_model=list[TicketResponse],
+    response_model=TicketListResponse,
 )
 def list_tickets(
     skip: int = Query(
@@ -80,6 +83,11 @@ def list_tickets(
         default=20,
         ge=1,
         le=100,
+    ),
+    search: str | None = Query(
+        default=None,
+        min_length=1,
+        max_length=100,
     ),
     status_filter: str | None = Query(
         default=None,
@@ -95,9 +103,10 @@ def list_tickets(
 
     service = TicketService(db)
 
-    tickets, total = service.list(
+    return service.list(
         skip=skip,
         limit=limit,
+        search=search,
         status_filter=status_filter,
         priority=priority,
         customer_id=customer_id,
@@ -105,13 +114,12 @@ def list_tickets(
         assigned_agent_id=assigned_agent_id,
     )
 
-    return tickets
-
 
 # ============================================================
 # GET SINGLE TICKET
 # ADMIN / SUPPORT AGENT / CUSTOMER
 # ============================================================
+
 
 @router.get(
     "/{ticket_id}",
@@ -132,6 +140,7 @@ def get_ticket(
 # UPDATE TICKET
 # ADMIN / SUPPORT AGENT
 # ============================================================
+
 
 @router.put(
     "/{ticket_id}",
@@ -166,6 +175,7 @@ def update_ticket(
 # DELETE TICKET
 # ADMIN ONLY
 # ============================================================
+
 
 @router.delete(
     "/{ticket_id}",

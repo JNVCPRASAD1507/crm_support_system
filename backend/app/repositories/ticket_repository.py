@@ -17,6 +17,7 @@ class TicketRepository(BaseRepository):
         *,
         skip: int = 0,
         limit: int = 20,
+        search: str | None = None,
         status: str | None = None,
         priority: str | None = None,
         customer_id: int | None = None,
@@ -25,26 +26,40 @@ class TicketRepository(BaseRepository):
     ):
         query = self.db.query(Ticket)
 
+        # Search by subject or description
+        if search is not None and search.strip():
+            search_term = f"%{search.strip()}%"
+
+            query = query.filter(
+                Ticket.subject.ilike(search_term)
+                | Ticket.description.ilike(search_term)
+            )
+
+        # Status filter
         if status is not None:
             query = query.filter(
                 Ticket.status == status
             )
 
+        # Priority filter
         if priority is not None:
             query = query.filter(
                 Ticket.priority == priority
             )
 
+        # Customer filter
         if customer_id is not None:
             query = query.filter(
                 Ticket.customer_id == customer_id
             )
 
+        # Category filter
         if category_id is not None:
             query = query.filter(
                 Ticket.category_id == category_id
             )
 
+        # Assigned agent filter
         if assigned_agent_id is not None:
             query = query.filter(
                 Ticket.assigned_agent_id == assigned_agent_id
