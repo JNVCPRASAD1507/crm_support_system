@@ -126,3 +126,9 @@ class Ticket(Base):
         back_populates="ticket",
         cascade="all, delete-orphan",
     )
+
+    notifications = relationship(
+        "Notification",
+        back_populates="ticket",
+        cascade="all, delete-orphan",
+    )
