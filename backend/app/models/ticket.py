@@ -15,9 +15,7 @@ from app.db.session import Base
 class Ticket(Base):
     __tablename__ = "tickets"
 
-    id: Mapped[int] = mapped_column(
-        primary_key=True
-    )
+    id: Mapped[int] = mapped_column(primary_key=True)
 
     customer_id: Mapped[int] = mapped_column(
         ForeignKey(
@@ -116,10 +114,15 @@ class Ticket(Base):
         "Category",
         back_populates="tickets",
     )
-    
+
     comments = relationship(
-    "TicketComment",
-    back_populates="ticket",
-    cascade="all, delete-orphan",
-)
-     
+        "TicketComment",
+        back_populates="ticket",
+        cascade="all, delete-orphan",
+    )
+
+    attachments = relationship(
+        "TicketAttachment",
+        back_populates="ticket",
+        cascade="all, delete-orphan",
+    )

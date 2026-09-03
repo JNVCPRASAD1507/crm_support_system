@@ -11,6 +11,29 @@ from app.repositories.ticket_repository import TicketRepository
 from app.schemas import ticket
 
 
+# Backward-compatible export used by business-rule tests.
+TRANS = {
+    "open": {
+        "in_progress",
+        "cancelled",
+    },
+    "in_progress": {
+        "waiting_for_customer",
+        "resolved",
+        "cancelled",
+    },
+    "waiting_for_customer": {
+        "in_progress",
+        "cancelled",
+    },
+    "resolved": {
+        "closed",
+    },
+    "closed": set(),
+    "cancelled": set(),
+}
+
+
 class TicketService:
 
     ALLOWED_PRIORITIES = {
@@ -60,14 +83,12 @@ class TicketService:
 
     def create(self, data):
 
-        # --------------------------------------------------------
-        # Validate customer
-        # --------------------------------------------------------
-
         from app.models.customer import Customer
 
         customer = (
-            self.db.query(Customer).filter(Customer.id == data.customer_id).first()
+            self.db.query(Customer)
+            .filter(Customer.id == data.customer_id)
+            .first()
         )
 
         if not customer:
@@ -76,14 +97,12 @@ class TicketService:
                 detail="Customer not found",
             )
 
-        # --------------------------------------------------------
-        # Validate category
-        # --------------------------------------------------------
-
         if data.category_id is not None:
 
             category = (
-                self.db.query(Category).filter(Category.id == data.category_id).first()
+                self.db.query(Category)
+                .filter(Category.id == data.category_id)
+                .first()
             )
 
             if not category:
@@ -98,23 +117,16 @@ class TicketService:
                     detail="Category is inactive",
                 )
 
-        # --------------------------------------------------------
-        # Validate priority
-        # --------------------------------------------------------
-
         priority = data.priority.lower()
 
         if priority not in self.ALLOWED_PRIORITIES:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
-                    "Invalid priority. Allowed values: " "low, medium, high, urgent"
+                    "Invalid priority. Allowed values: "
+                    "low, medium, high, urgent"
                 ),
             )
-
-        # --------------------------------------------------------
-        # Create ticket
-        # --------------------------------------------------------
 
         return self.repository.create(
             customer_id=data.customer_id,
@@ -156,10 +168,6 @@ class TicketService:
         assigned_agent_id: int | None = None,
     ):
 
-        # --------------------------------------------------------
-        # Validate status
-        # --------------------------------------------------------
-
         if status_filter is not None:
 
             status_filter = status_filter.lower()
@@ -169,14 +177,10 @@ class TicketService:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=(
                         "Invalid status. Allowed values: "
-                        "open, in_progress, pending, "
-                        "resolved, closed"
+                        "open, in_progress, waiting_for_customer, "
+                        "resolved, closed, cancelled"
                     ),
                 )
-
-        # --------------------------------------------------------
-        # Validate priority
-        # --------------------------------------------------------
 
         if priority is not None:
 
@@ -186,7 +190,8 @@ class TicketService:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=(
-                        "Invalid priority. Allowed values: " "low, medium, high, urgent"
+                        "Invalid priority. Allowed values: "
+                        "low, medium, high, urgent"
                     ),
                 )
 
@@ -219,7 +224,9 @@ class TicketService:
         if data.category_id is not None:
 
             category = (
-                self.db.query(Category).filter(Category.id == data.category_id).first()
+                self.db.query(Category)
+                .filter(Category.id == data.category_id)
+                .first()
             )
 
             if not category:
@@ -241,7 +248,9 @@ class TicketService:
         if data.assigned_agent_id is not None:
 
             agent = (
-                self.db.query(User).filter(User.id == data.assigned_agent_id).first()
+                self.db.query(User)
+                .filter(User.id == data.assigned_agent_id)
+                .first()
             )
 
             if not agent:
@@ -256,74 +265,99 @@ class TicketService:
                     detail="Assigned agent is inactive",
                 )
 
+            if agent.role not in {
+                "admin",
+                "support_agent",
+            }:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        "User is not an eligible support agent"
+                    ),
+                )
+
         # --------------------------------------------------------
         # Validate priority
         # --------------------------------------------------------
 
-        priority = data.priority
-
-        if priority is not None:
-
-            priority = priority.lower()
-
-            if priority not in self.ALLOWED_PRIORITIES:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=(
-                        "Invalid priority. Allowed values: " "low, medium, high, urgent"
-                    ),
-                )
-
-# --------------------------------------------------------
-# Validate status
-# --------------------------------------------------------
-
-new_status = data.status
-
-if new_status is not None:
-
-    new_status = new_status.lower()
-
-    if new_status not in self.ALLOWED_STATUSES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "Invalid status. Allowed values: "
-                "open, in_progress, waiting_for_customer, "
-                "resolved, closed, cancelled"
-            ),
+        priority = (
+            data.priority.lower()
+            if data.priority is not None
+            else None
         )
 
-    current_status = ticket.status
-
-    # No transition needed if status is unchanged
-    if new_status != current_status:
-
-        allowed_next_statuses = self.ALLOWED_STATUS_TRANSITIONS.get(
-            current_status,
-            set(),
-        )
-
-        if new_status not in allowed_next_statuses:
+        if (
+            priority is not None
+            and priority not in self.ALLOWED_PRIORITIES
+        ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
-                    f"Invalid status transition: "
-                    f"{current_status} → {new_status}"
+                    "Invalid priority. Allowed values: "
+                    "low, medium, high, urgent"
                 ),
             )
 
         # --------------------------------------------------------
-        # Handle resolved_at
+        # Validate status
         # --------------------------------------------------------
+
+        new_status = (
+            data.status.lower()
+            if data.status is not None
+            else None
+        )
 
         resolved_at = ticket.resolved_at
 
-        if new_status in {"resolved", "closed"} and ticket.resolved_at is None:
-            resolved_at = datetime.now(timezone.utc)
+        if new_status is not None:
 
-        elif new_status is not None and new_status not in {"resolved", "closed"}:
-            resolved_at = None
+            if new_status not in self.ALLOWED_STATUSES:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        "Invalid status. Allowed values: "
+                        "open, in_progress, "
+                        "waiting_for_customer, resolved, "
+                        "closed, cancelled"
+                    ),
+                )
+
+            current_status = ticket.status
+
+            if new_status != current_status:
+
+                allowed_next_statuses = (
+                    self.ALLOWED_STATUS_TRANSITIONS.get(
+                        current_status,
+                        set(),
+                    )
+                )
+
+                if new_status not in allowed_next_statuses:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=(
+                            f"Invalid status transition: "
+                            f"{current_status} → {new_status}"
+                        ),
+                    )
+
+                # ------------------------------------------------
+                # Handle resolved_at
+                # ------------------------------------------------
+
+                if (
+                    new_status in {"resolved", "closed"}
+                    and ticket.resolved_at is None
+                ):
+                    resolved_at = datetime.now(timezone.utc)
+
+                elif new_status not in {
+                    "resolved",
+                    "closed",
+                }:
+                    resolved_at = None
 
         # --------------------------------------------------------
         # Update ticket
@@ -338,10 +372,6 @@ if new_status is not None:
             priority=priority,
             status=new_status,
         )
-
-        # --------------------------------------------------------
-        # Update resolved_at
-        # --------------------------------------------------------
 
         updated_ticket.resolved_at = resolved_at
 
@@ -360,4 +390,6 @@ if new_status is not None:
 
         self.repository.delete(ticket)
 
-        return {"message": "Ticket deleted successfully"}
+        return {
+            "message": "Ticket deleted successfully"
+        }

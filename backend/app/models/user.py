@@ -67,3 +67,8 @@ class User(Base):
         "TicketComment",
         back_populates="user",
     )
+
+    attachments = relationship(
+        "TicketAttachment",
+        back_populates="uploaded_by",
+    )

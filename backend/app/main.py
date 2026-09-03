@@ -13,6 +13,7 @@ from app.models.customer import Customer
 from app.routers import auth, customers, categories
 from app.routers import tickets
 from app.routers.ticket_comments import router as ticket_comments_router
+from app.routers import ticket_attachments
 
 
 def seed_admin():
@@ -68,6 +69,7 @@ app.include_router(customers.r)
 app.include_router(categories.router)
 app.include_router(tickets.router)
 app.include_router(ticket_comments_router)
+app.include_router(ticket_attachments.router)
 
 
 @app.get("/health")
