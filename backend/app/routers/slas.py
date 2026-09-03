@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
@@ -52,8 +51,21 @@ def list_slas(
 
 
 # ---------------------------------------------------------
-# Priority routes MUST come before /{sla_id}
+# Priority routes
+# More specific route MUST come first
 # ---------------------------------------------------------
+
+@router.get(
+    "/priority/{priority}/deadlines",
+)
+def calculate_sla_deadlines(
+    priority: str,
+    db: Session = Depends(get_db),
+):
+    service = SLAService(db)
+
+    return service.calculate_deadlines(priority)
+
 
 @router.get(
     "/priority/{priority}",
@@ -66,18 +78,6 @@ def get_sla_by_priority(
     service = SLAService(db)
 
     return service.get_sla_for_priority(priority)
-
-
-@router.get(
-    "/priority/{priority}/deadlines",
-)
-def calculate_sla_deadlines(
-    priority: str,
-    db: Session = Depends(get_db),
-):
-    service = SLAService(db)
-
-    return service.calculate_deadlines(priority)
 
 
 # ---------------------------------------------------------
