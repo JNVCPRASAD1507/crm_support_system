@@ -11,20 +11,7 @@ import ProtectedRoute from "./components/ProtectedRoutes";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-
-function DashboardPlaceholder() {
-  return (
-    <div>
-      <h1>
-        Dashboard
-      </h1>
-
-      <p>
-        Authentication is working.
-      </p>
-    </div>
-  );
-}
+import Dashboard from "./pages/Dashboard";
 
 function App() {
   return (
@@ -41,12 +28,14 @@ function App() {
             element={<Register />}
           />
 
-          <Route element={<ProtectedRoute />}>
+          <Route
+            element={
+              <ProtectedRoute />
+            }
+          >
             <Route
               path="/dashboard"
-              element={
-                <DashboardPlaceholder />
-              }
+              element={<Dashboard />}
             />
           </Route>
 
