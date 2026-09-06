@@ -11,6 +11,8 @@ import type {
 } from "../types/customer";
 
 import { useAuth } from "../context/AuthContext";
+import Navbar from "../components/Navbar";
+import Sidebar from "../components/Sidebar";
 
 function Customers() {
   const { user } = useAuth();
@@ -60,17 +62,7 @@ function Customers() {
               statusFilter || undefined,
           });
 
-        setCustomers(
-          data.items,
-        );
-
-        setTotal(
-          data.total,
-        );
-
-        setPages(
-          data.pages,
-        );
+      setCustomers(Array.isArray(data) ? data : []);
       } catch (err: any) {
         const message =
           err?.response?.data?.detail;
