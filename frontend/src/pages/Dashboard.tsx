@@ -69,14 +69,12 @@ function Dashboard() {
   return (
     <div>
       <Navbar />
-      <div style={{ display: "flex" }}>
+      <div className="app-layout">
         <Sidebar />
-        <main style={{ flex: 1, padding: 24 }}>
+        <main className="page-content">
           <header style={{ marginBottom: 24 }}>
             <h1>Dashboard</h1>
-            <p>
-              Welcome, {user?.full_name}
-            </p>
+            <p>Welcome, {user?.full_name}</p>
             <p>Role: {user?.role}</p>
           </header>
 

@@ -83,9 +83,9 @@ function Tickets() {
   return (
     <div>
       <Navbar />
-      <div style={{ display: "flex" }}>
+      <div className="app-layout">
         <Sidebar />
-        <main style={{ flex: 1, padding: 24 }}>
+        <main className="page-content">
           <h1>Tickets</h1>
           <p>Total: {total}</p>
 

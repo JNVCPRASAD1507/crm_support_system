@@ -67,14 +67,12 @@ function Login() {
   };
 
   return (
-    <div>
-      <h1>Login</h1>
+    <div className="auth-page">
+      <div className="auth-card">
+      <h1>Welcome back</h1>
+      <p>Sign in to manage support operations securely.</p>
 
-      {error && (
-        <p>
-          {error}
-        </p>
-      )}
+      {error && <p className="alert alert-error" role="alert">{error}</p>}
 
       <form
         onSubmit={handleSubmit}
@@ -119,12 +117,8 @@ function Login() {
         </button>
       </form>
 
-      <p>
-        Don't have an account?{" "}
-        <Link to="/register">
-          Register
-        </Link>
-      </p>
+      <p>Don't have an account? <Link to="/register">Register</Link></p>
+      </div>
     </div>
   );
 }

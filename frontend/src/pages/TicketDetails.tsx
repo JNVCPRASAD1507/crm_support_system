@@ -120,9 +120,9 @@ function TicketDetails() {
   return (
     <div>
       <Navbar />
-      <div style={{ display: "flex" }}>
+      <div className="app-layout">
         <Sidebar />
-        <main style={{ flex: 1, padding: 24 }}>
+        <main className="page-content">
           <p>
             <Link to="/tickets">← Back to Tickets</Link>
           </p>

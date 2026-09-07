@@ -1,61 +1,52 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const linkStyle = ({ isActive }: { isActive: boolean }) => ({
-  display: "block",
-  padding: "8px 12px",
-  marginBottom: 4,
-  borderRadius: 6,
-  textDecoration: "none",
-  color: isActive ? "var(--accent)" : "var(--text)",
-  background: isActive ? "var(--accent-bg)" : "transparent",
-  fontWeight: isActive ? 600 : 400,
-});
+const items = [
+  ["/dashboard", "Dashboard", "▦"],
+  ["/tickets", "Tickets", "◫"],
+  ["/customers", "Customers", "♙"],
+] as const;
 
 function Sidebar() {
   const { user } = useAuth();
-
   const isAdmin = user?.role === "admin";
   const isAgent = user?.role === "support_agent" || isAdmin;
+  const linkClass = ({ isActive }: { isActive: boolean }) =>
+    `nav-link${isActive ? " active" : ""}`;
 
   return (
-    <aside
-      style={{
-        width: 220,
-        padding: 16,
-        borderRight: "1px solid var(--border)",
-        minHeight: "calc(100vh - 60px)",
-      }}
-    >
-      <nav>
-        <NavLink to="/dashboard" style={linkStyle}>
-          Dashboard
-        </NavLink>
-        <NavLink to="/tickets" style={linkStyle}>
-          Tickets
-        </NavLink>
-        <NavLink to="/customers" style={linkStyle}>
-          Customers
-        </NavLink>
+    <aside className="sidebar" aria-label="Primary navigation">
+      <nav className="sidebar-nav">
+        <p className="nav-section-label">Workspace</p>
+        {items.map(([to, label, icon]) => (
+          <NavLink key={to} to={to} className={linkClass}>
+            <span aria-hidden="true">{icon}</span>
+            {label}
+          </NavLink>
+        ))}
         {isAgent && (
-          <NavLink to="/categories" style={linkStyle}>
-            Categories
+          <NavLink to="/categories" className={linkClass}>
+            <span aria-hidden="true">⌘</span>Categories
           </NavLink>
         )}
         {isAdmin && (
           <>
-            <NavLink to="/sla" style={linkStyle}>
-              SLA
+            <p className="nav-section-label">Administration</p>
+            <NavLink to="/sla" className={linkClass}>
+              <span aria-hidden="true">◷</span>SLA
             </NavLink>
-            <NavLink to="/notifications" style={linkStyle}>
-              Notifications
+            <NavLink to="/notifications" className={linkClass}>
+              <span aria-hidden="true">◉</span>Notifications
             </NavLink>
-            <NavLink to="/audit-logs" style={linkStyle}>
-              Audit Logs
+            <NavLink to="/audit-logs" className={linkClass}>
+              <span aria-hidden="true">≡</span>Audit Logs
             </NavLink>
           </>
         )}
       </nav>
+      <div className="sidebar-foot">
+        <span className="status-dot" /> API-connected workspace
+      </div>
     </aside>
   );
 }

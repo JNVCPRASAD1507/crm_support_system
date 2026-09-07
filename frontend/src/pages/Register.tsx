@@ -84,22 +84,14 @@ function Register() {
   };
 
   return (
-    <div>
-      <h1>
-        Register
-      </h1>
+    <div className="auth-page">
+      <div className="auth-card">
+      <h1>Create account</h1>
+      <p>Set up your CRM Support workspace profile.</p>
 
-      {error && (
-        <p>
-          {error}
-        </p>
-      )}
+      {error && <p className="alert alert-error" role="alert">{error}</p>}
 
-      {success && (
-        <p>
-          {success}
-        </p>
-      )}
+      {success && <p className="alert alert-success" role="status">{success}</p>}
 
       <form
         onSubmit={handleSubmit}
@@ -209,12 +201,8 @@ function Register() {
         </button>
       </form>
 
-      <p>
-        Already have an account?{" "}
-        <Link to="/login">
-          Login
-        </Link>
-      </p>
+      <p>Already have an account? <Link to="/login">Login</Link></p>
+      </div>
     </div>
   );
 }

@@ -1,10 +1,10 @@
 # Resolve CRM & Customer Support Management System
 
-EOD submission project built as a **monolithic full-stack application**.
+Project built as a **monolithic full-stack application**.
 
 **Backend:** FastAPI · SQLAlchemy · PostgreSQL · Pydantic · JWT · Alembic · Repository Pattern · Service Layer
 
-**Frontend:** React + Vite · Axios · React Router · Lucide icons · custom React-Bits-inspired Spotlight cards
+**Frontend:** React + Vite with Typescript · Axios · React Router · Lucide icons · custom React-Bits-inspired Spotlight cards
 
 ## Run
 

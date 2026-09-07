@@ -1,3 +1,4 @@
+
 import {
   useCallback,
   useEffect,
@@ -11,11 +12,13 @@ import type {
 } from "../types/customer";
 
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 
 function Customers() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [customers, setCustomers] =
     useState<Customer[]>([]);
@@ -43,318 +46,380 @@ function Customers() {
 
   const limit = 10;
 
-  const loadCustomers =
-    useCallback(async () => {
-      try {
-        setLoading(true);
-        setError("");
+  const loadCustomers = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-        const skip =
-          (page - 1) * limit;
+      const skip = (page - 1) * limit;
 
-        const data =
-          await customerService.list({
-            skip,
-            limit,
-            search:
-              search.trim() || undefined,
-            status:
-              statusFilter || undefined,
-          });
+      const data = await customerService.list({
+        skip,
+        limit,
+        search: search.trim() || undefined,
+        status: statusFilter || undefined,
+      });
 
       setCustomers(Array.isArray(data) ? data : []);
-      } catch (err: any) {
-        const message =
-          err?.response?.data?.detail;
 
-        setError(
-          typeof message === "string"
-            ? message
-            : "Failed to load customers.",
-        );
-      } finally {
-        setLoading(false);
-      }
-    }, [
-      page,
-      search,
-      statusFilter,
-    ]);
+      setTotal(
+        Array.isArray(data)
+          ? data.length
+          : 0,
+      );
+
+      setPages(
+        Math.max(
+          1,
+          Math.ceil(
+            (Array.isArray(data)
+              ? data.length
+              : 0) / limit,
+          ),
+        ),
+      );
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.detail;
+
+      setError(
+        typeof message === "string"
+          ? message
+          : "Failed to load customers.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    page,
+    search,
+    statusFilter,
+  ]);
 
   useEffect(() => {
     loadCustomers();
   }, [loadCustomers]);
 
-  const handleSearch =
-    () => {
-      setPage(1);
-    };
+  const handleSearch = () => {
+    setPage(1);
+  };
 
-  const handleDelete =
-    async (
-      customerId: number,
-    ) => {
-      const confirmed =
-        window.confirm(
-          "Are you sure you want to delete this customer?",
-        );
+  const handleDelete = async (
+    customerId: number,
+  ) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this customer?",
+    );
 
-      if (!confirmed) {
-        return;
-      }
+    if (!confirmed) {
+      return;
+    }
 
-      try {
-        await customerService.delete(
-          customerId,
-        );
+    try {
+      await customerService.delete(
+        customerId,
+      );
 
-        await loadCustomers();
-      } catch (err: any) {
-        const message =
-          err?.response?.data?.detail;
+      await loadCustomers();
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.detail;
 
-        setError(
-          typeof message === "string"
-            ? message
-            : "Failed to delete customer.",
-        );
-      }
-    };
+      setError(
+        typeof message === "string"
+          ? message
+          : "Failed to delete customer.",
+      );
+    }
+  };
 
   return (
     <div>
-      <header>
-        <h1>
-          Customers
-        </h1>
+      <Navbar />
 
-        <p>
-          Total Customers: {total}
-        </p>
-      </header>
+      <div className="app-layout">
+        <Sidebar />
 
-      <hr />
+        <main className="page-content">
 
-      <section>
-        <input
-          type="text"
-          placeholder="Search customers..."
-          value={search}
-          onChange={(event) =>
-            setSearch(
-              event.target.value,
-            )
-          }
-          onKeyDown={(event) => {
-            if (
-              event.key === "Enter"
-            ) {
-              handleSearch();
-            }
-          }}
-        />
+          {/* Page Header */}
+          <div className="page-header-row">
+            <div>
 
-        <select
-          value={statusFilter}
-          onChange={(event) => {
-            setStatusFilter(
-              event.target.value,
-            );
+              {/* Back Button
+              <button
+                type="button"
+                className="back-button"
+                onClick={() =>
+                  navigate("/dashboard")
+                }
+                aria-label="Back to dashboard"
+                title="Back to dashboard"
+              >
+                <span aria-hidden="true">
+                  ←
+                </span>{" "}
+                Back
+              </button> */}
 
-            setPage(1);
-          }}
-        >
-          <option value="">
-            All Statuses
-          </option>
+              <h1>Customers</h1>
 
-          <option value="active">
-            Active
-          </option>
+              <p>
+                Total Customers: {total}
+              </p>
 
-          <option value="inactive">
-            Inactive
-          </option>
-        </select>
+            </div>
+          </div>
 
-        <button
-          onClick={handleSearch}
-        >
-          Search
-        </button>
-
-        <button
-          onClick={loadCustomers}
-        >
-          Refresh
-        </button>
-      </section>
-
-      <hr />
-
-      {loading && (
-        <p>
-          Loading customers...
-        </p>
-      )}
-
-      {error && (
-        <div>
-          <p>
-            {error}
-          </p>
-
-          <button
-            onClick={loadCustomers}
+          {/* Search & Filters */}
+          <section
+            className="toolbar"
+            aria-label="Customer filters"
           >
-            Retry
-          </button>
-        </div>
-      )}
+            <input
+              type="text"
+              placeholder="Search customers..."
+              value={search}
+              onChange={(event) =>
+                setSearch(event.target.value)
+              }
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  handleSearch();
+                }
+              }}
+              aria-label="Search customers"
+            />
 
-      {!loading &&
-        !error &&
-        customers.length === 0 && (
-          <p>
-            No customers found.
-          </p>
-        )}
+            <select
+              value={statusFilter}
+              onChange={(event) => {
+                setStatusFilter(
+                  event.target.value,
+                );
 
-      {!loading &&
-        customers.length > 0 && (
-          <table>
-            <thead>
-              <tr>
-                <th>
-                  ID
-                </th>
+                setPage(1);
+              }}
+              aria-label="Filter customers by status"
+            >
+              <option value="">
+                All Statuses
+              </option>
 
-                <th>
-                  User ID
-                </th>
+              <option value="active">
+                Active
+              </option>
 
-                <th>
-                  Phone
-                </th>
+              <option value="inactive">
+                Inactive
+              </option>
+            </select>
 
-                <th>
-                  Address
-                </th>
+            <button
+              type="button"
+              onClick={handleSearch}
+            >
+              Search
+            </button>
 
-                <th>
-                  Status
-                </th>
+            <button
+              type="button"
+              className="button-secondary"
+              onClick={loadCustomers}
+            >
+              Refresh
+            </button>
+          </section>
 
-                <th>
-                  Created
-                </th>
+          {/* Loading State */}
+          {loading && (
+            <div
+              className="skeleton-list"
+              aria-label="Loading customers"
+            >
+              <span className="skeleton" />
+              <span className="skeleton" />
+              <span className="skeleton" />
+            </div>
+          )}
 
-                {user?.role ===
-                  "admin" && (
-                  <th>
-                    Actions
-                  </th>
-                )}
-              </tr>
-            </thead>
+          {/* Error State */}
+          {error && (
+            <div
+              className="alert alert-error"
+              role="alert"
+            >
+              <p>{error}</p>
 
-            <tbody>
-              {customers.map(
-                (customer) => (
-                  <tr
-                    key={
-                      customer.id
-                    }
-                  >
-                    <td>
-                      {customer.id}
-                    </td>
+              <button
+                type="button"
+                onClick={loadCustomers}
+              >
+                Retry
+              </button>
+            </div>
+          )}
 
-                    <td>
-                      {customer.user_id}
-                    </td>
+          {/* Empty State */}
+          {!loading &&
+            !error &&
+            customers.length === 0 && (
+              <section className="empty-state">
+                <h2>
+                  No customers found
+                </h2>
 
-                    <td>
-                      {customer.phone ||
-                        "-"}
-                    </td>
+                <p>
+                  Try changing your search
+                  or status filter.
+                </p>
+              </section>
+            )}
 
-                    <td>
-                      {customer.address ||
-                        "-"}
-                    </td>
+          {/* Customers Table */}
+          {!loading &&
+            customers.length > 0 && (
+              <div className="table-wrap">
 
-                    <td>
-                      {customer.status}
-                    </td>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
 
-                    <td>
-                      {new Date(
-                        customer.created_at,
-                      ).toLocaleString()}
-                    </td>
+                      <th>Name</th>
 
-                    {user?.role ===
-                      "admin" && (
-                      <td>
-                        <button
-                          onClick={() =>
-                            handleDelete(
-                              customer.id,
-                            )
+                      <th>Email</th>
+
+                      <th>Phone</th>
+
+                      <th>Company</th>
+
+                      <th>Address</th>
+
+                      <th>Status</th>
+
+                      <th>Created</th>
+
+                      {user?.role === "admin" && (
+                        <th>
+                          Actions
+                        </th>
+                      )}
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {customers.map(
+                      (customer) => (
+                        <tr
+                          key={
+                            customer.id
                           }
                         >
-                          Delete
-                        </button>
-                      </td>
+                          <td>
+                            {customer.id}
+                          </td>
+
+                          <td>
+                            {customer.name}
+                          </td>
+
+                          <td>
+                            {customer.email}
+                          </td>
+
+                          <td>
+                            {customer.phone ||
+                              "-"}
+                          </td>
+
+                          <td>
+                            {customer.company ||
+                              "-"}
+                          </td>
+
+                          <td>
+                            {customer.address ||
+                              "-"}
+                          </td>
+
+                          <td>
+                            {customer.status}
+                          </td>
+
+                          <td>
+                            {new Date(
+                              customer.created_at,
+                            ).toLocaleString()}
+                          </td>
+
+                          {user?.role ===
+                            "admin" && (
+                            <td>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDelete(
+                                    customer.id,
+                                  )
+                                }
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      ),
                     )}
-                  </tr>
-                ),
-              )}
-            </tbody>
-          </table>
-        )}
+                  </tbody>
+                </table>
 
-      <hr />
+              </div>
+            )}
 
-      {!loading &&
-        pages > 0 && (
-          <div>
-            <button
-              disabled={page <= 1}
-              onClick={() =>
-                setPage(
-                  (current) =>
-                    current - 1,
-                )
-              }
-            >
-              Previous
-            </button>
+          {/* Pagination */}
+          {!loading &&
+            pages > 0 &&
+            customers.length > 0 && (
+              <div className="pagination">
 
-            <span>
-              {" "}
-              Page {page} of {pages}{" "}
-            </span>
+                <button
+                  disabled={page <= 1}
+                  onClick={() =>
+                    setPage(
+                      (current) =>
+                        current - 1,
+                    )
+                  }
+                >
+                  Previous
+                </button>
 
-            <button
-              disabled={
-                page >= pages
-              }
-              onClick={() =>
-                setPage(
-                  (current) =>
-                    current + 1,
-                )
-              }
-            >
-              Next
-            </button>
-          </div>
-        )}
+                <span>
+                  Page {page} of {pages}
+                </span>
+
+                <button
+                  disabled={
+                    page >= pages
+                  }
+                  onClick={() =>
+                    setPage(
+                      (current) =>
+                        current + 1,
+                    )
+                  }
+                >
+                  Next
+                </button>
+
+              </div>
+            )}
+
+        </main>
+      </div>
     </div>
   );
 }
 
 export default Customers;
-
